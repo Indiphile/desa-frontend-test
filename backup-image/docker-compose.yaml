@@ -1,0 +1,23 @@
+  version: "3.8"
+
+  services:
+
+    desa-db-backup:
+      image: indiphile/desa-db-backup:latest
+      volumes:
+        - ./backups:/backup
+      restart: unless-stopped
+      environment:
+        DB_TYPE: mysql
+        DB_HOST: desa-mysql
+        DB_NAME: "${DB_NAME}"
+        DB_USER: "${DB_USER}"
+        DB_PASS: "${DB_PASSWORD}"
+        DB_BACKUP_INTERVAL: 720
+        DB_CLEANUP_TIME: 72000
+        #DB_BACKUP_BEGIN: 1
+        CHECKSUM: SHA1
+        COMPRESSION: GZ
+        CONTAINER_ENABLE_MONITORING: "false"
+      depends_on:
+        - desa-mysql
