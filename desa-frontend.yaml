@@ -1,0 +1,78 @@
+version: "3"
+services:
+  desa-site:
+    image: indiphile/desa-site:latest
+    restart: unless-stopped
+    ports:
+      - 5010:80
+    volumes:
+      - ./config/wp_php.ini:/usr/local/etc/php/conf.d/conf.ini
+      - ./wp-app:/var/www/html # Full wordpress project
+    environment:
+      WORDPRESS_DB_HOST: desa-mysql:3306
+      WORDPRESS_DB_NAME: "${DB_NAME}"
+      WORDPRESS_DB_USER: "${DB_USER}"
+      WORDPRESS_DB_PASSWORD: "${DB_PASSWORD}"
+    depends_on:
+      - desa-mysql
+  desa-mysql:
+    image: indiphile/desa-mysql:latest
+    volumes:
+      - ./db_data:/var/lib/mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${DB_NAME}"
+      MYSQL_USER: "${DB_USER}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+  desa-phpmyadmin:
+    image: indiphile/desa-phpmyadmin:latest
+    ports:
+      - 5011:80
+    volumes:
+      - ./config/pma_php.ini:/usr/local/etc/php/conf.d/conf.ini
+      - ./config/pma_config.php:/etc/phpmyadmin/config.user.inc.php
+    restart: unless-stopped
+    environment:
+      # https://docs.phpmyadmin.net/en/latest/setup.html#docker-environment-variables
+      PMA_HOST: desa-mysql
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+      UPLOAD_LIMIT: 50M
+    depends_on:
+      - desa-mysql
+  desa-db-backup:
+    image: indiphile/desa-db-backup:latest
+    volumes:
+      - ./backups:/backup
+    restart: unless-stopped
+    environment:
+      DB_TYPE: mysql
+      DB_HOST: desa-mysql
+      DB_NAME: "${DB_NAME}"
+      DB_USER: "${DB_USER}"
+      DB_PASS: "${DB_PASSWORD}"
+      DB_BACKUP_INTERVAL: 720
+      DB_CLEANUP_TIME: 72000
+      #DB_BACKUP_BEGIN: 1
+      CHECKSUM: SHA1
+      COMPRESSION: GZ
+      CONTAINER_ENABLE_MONITORING: "false"
+    depends_on:
+      - desa-mysql
+
+  backup:
+    image: offen/docker-volume-backup:v2
+    container_name: backup
+    restart: always
+    env_file:
+      - ./backup.env
+    volumes:
+      - ./backup-configuration:/etc/dockervolumebackup/conf.d
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config/wp_php.ini:/backup/config/wp_php.ini-backup:ro
+      - ./wp-app:/backup/wp-app-backup:ro
+      - ./db_data:/backup/db_data-backup:ro
+      - ./config/pma_php.ini:/backup/config/pma_php.ini-backup:ro
+      - ./config/pma_config.php:/backup/config/pma_config.php-backup:ro
+      - ./backups:/backup/backups-backup:ro
