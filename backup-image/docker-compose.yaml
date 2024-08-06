@@ -19,5 +19,3 @@
         CHECKSUM: SHA1
         COMPRESSION: GZ
         CONTAINER_ENABLE_MONITORING: "false"
-      depends_on:
-        - desa-mysql
